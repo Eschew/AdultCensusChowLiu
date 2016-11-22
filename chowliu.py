@@ -29,32 +29,37 @@ def ProcessPQ(joints, marg, feature_length):
       heapq.heappush(pq, (-I, i, j))
   return pq
 
+
+def findSet(parent, i):
+  while i != parent[i]:
+    i = parent[i]
+
+  return i
+
 def buildMST(pq, feature_length):
   """
   Builds the MST using the pq generated above.
   """
-  seen = set()
+  parent = range(feature_length)
+  size = [1]*feature_length
 
   count = 0
   edges = set()
-  while len(seen) < feature_length:
+  while count < feature_length-1:
     item = heapq.heappop(pq)
     i = item[1]
     j = item[2]
-    if i in seen and j not in seen:
-      seen.add(j)
+    seti = findSet(parent, i)
+    setj = findSet(parent, j)
+    if seti != setj:
+      if size[seti] < size[setj]:
+        size[setj] += size[seti]
+        parent[seti] = setj
+      else:
+        size[seti] += size[setj]
+        parent[setj] = seti
       edges.add((i, j))
       count += 1
-    if j in seen and i not in seen:
-      seen.add(i)
-      edges.add((i, j))
-      count += 1
-
-    if len(seen)==0:
-      seen.add(j)
-      seen.add(i)
-      edges.add((i, j))
-      count += 2
 
   return edges
 
@@ -117,7 +122,7 @@ for i in range(feature_length):
   for j in range(i+1, feature_length):
     joints[(i, j)] = defaultdict(float)
 
-count_aggr = -999
+count_aggr = 0
 
 for line in f:
   n = line.strip().split(",")
@@ -130,7 +135,7 @@ for line in f:
     for j in range(i+1, feature_length):
       joints[(i,j)][(n[i], n[j])] += 1./data_size
 
-  if count_aggr%1000 == 0:
+  if count_aggr%1000 == 10:
     pq = ProcessPQ(joints, marg, feature_length)
     edges = buildMST(pq, feature_length)
     fname = ("graphs/%d.jpg")%count_aggr
